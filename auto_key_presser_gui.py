@@ -19,7 +19,7 @@ class AutoKeyPresserGUI:
     def __init__(self):
         self.running = False
         self.key_thread = None
-        self.delay = 0.5  # 按键之间的延迟时间（秒）
+        self.delay = 500  # 按键之间的延迟时间（毫秒）
         self.press_count = 0
         
         # 默认按键序列配置
@@ -68,7 +68,7 @@ class AutoKeyPresserGUI:
         title_label.pack(pady=10)
         
         # 副标题
-        subtitle_label = tk.Label(main_container, text="循环按键：反引号(`) → 向上键(↑) → 回车键(↵)", 
+        subtitle_label = tk.Label(main_container, text="循环按键：反引号(`) → 向上键(↑) → 回车键(↵) | 默认间隔：500毫秒", 
                                 font=("Arial", 11), 
                                 bg='#f0f0f0', fg='#666')
         subtitle_label.pack(pady=5)
@@ -272,10 +272,10 @@ class AutoKeyPresserGUI:
                     self.add_log(f"按键: {key_name}")
                     
                     # 延迟
-                    time.sleep(self.delay)
+                    time.sleep(self.delay / 1000.0)
                 
                 # 循环间隔
-                time.sleep(self.delay)
+                time.sleep(self.delay / 1000.0)
                 
             except Exception as e:
                 self.add_log(f"错误: {e}")
@@ -327,7 +327,7 @@ class AutoKeyPresserGUI:
         delay_inner_frame = tk.Frame(delay_frame, bg='#f0f0f0')
         delay_inner_frame.pack(pady=10, padx=10)
         
-        tk.Label(delay_inner_frame, text="按键延迟 (秒):", 
+        tk.Label(delay_inner_frame, text="按键延迟 (毫秒):", 
                 font=("Arial", 12), bg='#f0f0f0').pack(side='left')
         
         delay_var = tk.StringVar(value=str(self.delay))
@@ -335,7 +335,7 @@ class AutoKeyPresserGUI:
                              font=("Arial", 12))
         delay_entry.pack(side='left', padx=15)
         
-        tk.Label(delay_inner_frame, text="(0.1 - 5.0)", 
+        tk.Label(delay_inner_frame, text="(10 - 5000)", 
                 font=("Arial", 10), bg='#f0f0f0', fg='#666').pack(side='left')
         
         # 安全设置
@@ -359,8 +359,8 @@ class AutoKeyPresserGUI:
         
         def apply_settings():
             try:
-                new_delay = float(delay_var.get())
-                if 0.01 <= new_delay <= 5.0:
+                new_delay = int(delay_var.get())
+                if 10 <= new_delay <= 5000:
                     self.delay = new_delay
                     self.failsafe_enabled = failsafe_var.get()
                     self.esc_stop_enabled = esc_var.get()
@@ -368,24 +368,30 @@ class AutoKeyPresserGUI:
                     # 更新PyAutoGUI设置
                     pyautogui.FAILSAFE = self.failsafe_enabled
                     
-                    messagebox.showinfo("成功", "设置已保存")
+                    messagebox.showinfo("成功", f"设置已保存\n延迟时间：{new_delay}毫秒")
                     settings_window.destroy()
                 else:
-                    messagebox.showerror("错误", "延迟时间必须在0.1-5.0秒之间")
+                    messagebox.showerror("错误", "延迟时间必须在10-5000毫秒之间")
             except ValueError:
-                messagebox.showerror("错误", "请输入有效的数字")
+                messagebox.showerror("错误", "请输入有效的整数")
         
         # 按钮框架
         button_frame = tk.Frame(settings_window, bg='#f0f0f0')
         button_frame.pack(pady=20)
         
-        tk.Button(button_frame, text="✅ 应用", command=apply_settings,
-                 font=("Arial", 12, "bold"), bg='#4CAF50', fg='white',
-                 width=12, height=2, relief='raised', bd=2).pack(side='left', padx=10)
+        # 应用按钮
+        apply_btn = tk.Button(button_frame, text="✅ 应用", command=apply_settings,
+                             font=("Arial", 12, "bold"), bg='#4CAF50', fg='white',
+                             width=15, height=2, relief='raised', bd=3,
+                             activebackground='#45a049', activeforeground='white')
+        apply_btn.pack(side='left', padx=15)
         
-        tk.Button(button_frame, text="❌ 取消", command=settings_window.destroy,
-                 font=("Arial", 12), bg='#f44336', fg='white',
-                 width=12, height=2, relief='raised', bd=2).pack(side='left', padx=10)
+        # 取消按钮
+        cancel_btn = tk.Button(button_frame, text="❌ 取消", command=settings_window.destroy,
+                              font=("Arial", 12), bg='#f44336', fg='white',
+                              width=15, height=2, relief='raised', bd=3,
+                              activebackground='#da190b', activeforeground='white')
+        cancel_btn.pack(side='left', padx=15)
         
     def open_custom_keys(self):
         """打开自定义按键窗口"""
@@ -467,15 +473,24 @@ class AutoKeyPresserGUI:
             self.keys_text.delete(1.0, tk.END)
             self.keys_text.insert(tk.END, preset)
         
-        tk.Button(preset_inner_frame, text="🔄 默认序列", command=load_preset_1,
-                 font=("Arial", 11), bg='#2196F3', fg='white',
-                 width=12, height=2, relief='raised', bd=2).pack(side='left', padx=8)
-        tk.Button(preset_inner_frame, text="⬆️ 方向键", command=load_preset_2,
-                 font=("Arial", 11), bg='#2196F3', fg='white',
-                 width=12, height=2, relief='raised', bd=2).pack(side='left', padx=8)
-        tk.Button(preset_inner_frame, text="🔢 数字键", command=load_preset_3,
-                 font=("Arial", 11), bg='#2196F3', fg='white',
-                 width=12, height=2, relief='raised', bd=2).pack(side='left', padx=8)
+        # 预设按钮
+        preset1_btn = tk.Button(preset_inner_frame, text="🔄 默认序列", command=load_preset_1,
+                               font=("Arial", 11), bg='#2196F3', fg='white',
+                               width=12, height=2, relief='raised', bd=3,
+                               activebackground='#1976D2', activeforeground='white')
+        preset1_btn.pack(side='left', padx=10)
+        
+        preset2_btn = tk.Button(preset_inner_frame, text="⬆️ 方向键", command=load_preset_2,
+                               font=("Arial", 11), bg='#2196F3', fg='white',
+                               width=12, height=2, relief='raised', bd=3,
+                               activebackground='#1976D2', activeforeground='white')
+        preset2_btn.pack(side='left', padx=10)
+        
+        preset3_btn = tk.Button(preset_inner_frame, text="🔢 数字键", command=load_preset_3,
+                               font=("Arial", 11), bg='#2196F3', fg='white',
+                               width=12, height=2, relief='raised', bd=3,
+                               activebackground='#1976D2', activeforeground='white')
+        preset3_btn.pack(side='left', padx=10)
         
         # 应用按钮
         def apply_custom_keys():
@@ -511,12 +526,19 @@ class AutoKeyPresserGUI:
         button_frame = tk.Frame(custom_window, bg='#f0f0f0')
         button_frame.pack(pady=15)
         
-        tk.Button(button_frame, text="✅ 应用", command=apply_custom_keys,
-                 font=("Arial", 12, "bold"), bg='#4CAF50', fg='white', 
-                 width=12, height=2, relief='raised', bd=2).pack(side='left', padx=10)
-        tk.Button(button_frame, text="❌ 取消", command=custom_window.destroy,
-                 font=("Arial", 12), bg='#f44336', fg='white', 
-                 width=12, height=2, relief='raised', bd=2).pack(side='left', padx=10)
+        # 应用按钮
+        apply_custom_btn = tk.Button(button_frame, text="✅ 应用", command=apply_custom_keys,
+                                    font=("Arial", 12, "bold"), bg='#4CAF50', fg='white', 
+                                    width=15, height=2, relief='raised', bd=3,
+                                    activebackground='#45a049', activeforeground='white')
+        apply_custom_btn.pack(side='left', padx=15)
+        
+        # 取消按钮
+        cancel_custom_btn = tk.Button(button_frame, text="❌ 取消", command=custom_window.destroy,
+                                     font=("Arial", 12), bg='#f44336', fg='white', 
+                                     width=15, height=2, relief='raised', bd=3,
+                                     activebackground='#da190b', activeforeground='white')
+        cancel_custom_btn.pack(side='left', padx=15)
         
     def start_keyboard_listener(self):
         """启动键盘监听"""
